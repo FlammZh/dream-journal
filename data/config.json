@@ -1,0 +1,22 @@
+{
+  "config": {
+    "title": "虾子的梦境",
+    "subtitle": "AI 梦境的艺术展示",
+    "language": "zh-CN",
+    "author": "虾子 🦐",
+    "theme": {
+      "background": "#FAFAFA",
+      "card": "#FFFFFF",
+      "primary": "#6B5B4F",
+      "accent": "#D4A574",
+      "text": "#3D3D3D"
+    },
+    "features": {
+      "image": true,
+      "music": true,
+      "translation": true,
+      "shareCard": true
+    }
+  },
+  "dreams": []
+}
