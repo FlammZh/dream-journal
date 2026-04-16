@@ -151,45 +151,23 @@
         .dream-card .excerpt {
             font-size: 0.95rem;
             color: var(--text);
-            margin-bottom: 16px;
+            margin-bottom: 8px;
             display: -webkit-box;
             -webkit-line-clamp: 3;
             -webkit-box-orient: vertical;
             overflow: hidden;
+            line-height: 1.6;
         }
         
-        .dream-card .lang-tabs {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-        
-        .dream-card .lang-tab {
-            padding: 4px 12px;
-            font-size: 0.75rem;
-            border-radius: 12px;
-            background: #F0EBE5;
+        .dream-card .chinese-excerpt {
+            font-size: 0.85rem;
             color: var(--text-light);
-            cursor: pointer;
-            border: none;
-            transition: all 0.2s;
-        }
-        
-        .dream-card .lang-tab.active {
-            background: var(--primary);
-            color: white;
-        }
-        
-        .dream-card .text-content {
-            display: none;
-            font-size: 0.9rem;
-            line-height: 1.8;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-        
-        .dream-card .text-content.active {
-            display: block;
+            font-style: italic;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.5;
         }
         
         .dream-card .footer {
@@ -293,6 +271,17 @@
             font-size: 0.9rem;
             color: var(--accent);
             margin-bottom: 16px;
+        }
+        
+        .modal .modal-section {
+            margin-bottom: 24px;
+        }
+        
+        .modal .modal-section h4 {
+            font-size: 0.85rem;
+            color: var(--accent);
+            margin-bottom: 8px;
+            font-weight: 500;
         }
         
         .modal .modal-text {
@@ -405,6 +394,18 @@
                 dreams.filter(d => d.music).length;
         }
         
+        // 提取精彩片段（取前100字或第一句话）
+        function extractExcerpt(text, maxLen = 100) {
+            if (!text) return '';
+            // 找第一句话
+            const firstSentence = text.match(/^[^.!?。！？]+[.!?。！？]/);
+            if (firstSentence && firstSentence[0].length <= maxLen) {
+                return firstSentence[0];
+            }
+            // 否则取前maxLen个字
+            return text.slice(0, maxLen) + (text.length > maxLen ? '...' : '');
+        }
+        
         function renderDreams(dreamList) {
             const grid = document.getElementById('dreams-grid');
             
@@ -416,8 +417,13 @@
             grid.innerHTML = dreamList.map(dream => {
                 const hasChinese = dream.chinese && dream.chinese.trim();
                 const hasEnglish = dream.english && dream.english.trim();
-                const excerpt = hasChinese ? dream.chinese : (hasEnglish ? dream.english : '');
-                const shortExcerpt = excerpt.slice(0, 150) + (excerpt.length > 150 ? '...' : '');
+                
+                // 优先用英文原文做精彩片段
+                const originalText = hasEnglish ? dream.english : (hasChinese ? dream.chinese : '');
+                const excerpt = extractExcerpt(originalText);
+                
+                // 中文翻译片段
+                const chineseExcerpt = hasChinese ? extractExcerpt(dream.chinese) : '';
                 
                 return `
                     <div class="dream-card" data-id="${dream.id}">
@@ -426,18 +432,8 @@
                         </div>
                         <div class="content">
                             <div class="date">${formatDate(dream.date)}</div>
-                            <div class="excerpt">${escapeHtml(shortExcerpt)}</div>
-                            
-                            ${(hasChinese && hasEnglish) ? `
-                                <div class="lang-tabs">
-                                    <button class="lang-tab active" onclick="switchLang(this, 'en')">EN</button>
-                                    <button class="lang-tab" onclick="switchLang(this, 'zh')">中文</button>
-                                </div>
-                                <div class="text-content active" data-lang="en">${escapeHtml(dream.english)}</div>
-                                <div class="text-content" data-lang="zh">${escapeHtml(dream.chinese)}</div>
-                            ` : `
-                                <div class="text-content active">${escapeHtml(excerpt)}</div>
-                            `}
+                            <div class="excerpt">${escapeHtml(excerpt)}</div>
+                            ${hasChinese ? `<div class="chinese-excerpt">${escapeHtml(chineseExcerpt)}</div>` : ''}
                             
                             <div class="footer">
                                 <span class="tag">${dream.id.split('_').slice(1, -2).join('-')}</span>
@@ -485,18 +481,6 @@
             return div.innerHTML;
         }
         
-        function switchLang(btn, lang) {
-            const card = btn.closest('.dream-card');
-            const tabs = card.querySelectorAll('.lang-tab');
-            const contents = card.querySelectorAll('.text-content');
-            
-            tabs.forEach(t => t.classList.remove('active'));
-            contents.forEach(c => c.classList.remove('active'));
-            
-            btn.classList.add('active');
-            card.querySelector(`.text-content[data-lang="${lang}"]`).classList.add('active');
-        }
-        
         function openModal(id) {
             const dream = dreams.find(d => d.id === id);
             if (!dream) return;
@@ -505,13 +489,32 @@
             document.getElementById('modal-image').style.display = dream.image ? 'block' : 'none';
             document.getElementById('modal-date').textContent = formatDate(dream.date);
             
-            let text = '';
+            let content = '';
             if (dream.english && dream.chinese) {
-                text = `【English】\n\n${dream.english}\n\n---\n\n【中文】\n\n${dream.chinese}`;
-            } else {
-                text = dream.english || dream.chinese || '';
+                content = `
+                    <div class="modal-section">
+                        <h4>English</h4>
+                        <div class="modal-text">${escapeHtml(dream.english)}</div>
+                    </div>
+                    <div class="modal-section">
+                        <h4>中文</h4>
+                        <div class="modal-text">${escapeHtml(dream.chinese)}</div>
+                    </div>
+                `;
+            } else if (dream.english) {
+                content = `
+                    <div class="modal-section">
+                        <div class="modal-text">${escapeHtml(dream.english)}</div>
+                    </div>
+                `;
+            } else if (dream.chinese) {
+                content = `
+                    <div class="modal-section">
+                        <div class="modal-text">${escapeHtml(dream.chinese)}</div>
+                    </div>
+                `;
             }
-            document.getElementById('modal-text').textContent = text;
+            document.getElementById('modal-text').innerHTML = content;
             
             document.getElementById('dream-modal').classList.add('open');
         }
